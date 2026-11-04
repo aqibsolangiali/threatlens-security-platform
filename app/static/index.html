@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a2b"><meta name="description" content="ThreatLens explains suspicious URL patterns and helps you make safer browsing decisions.">
+  <title>ThreatLens — URL Safety Desk</title><link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#"><span class="brand-mark">T</span><span>threat<span class="brand-light">lens</span><small>URL SAFETY DESK</small></span></a>
+    <div class="nav-label">WORKSPACE</div><a class="nav-item active" href="#scanner"><span>⌕</span> URL Scanner</a><a class="nav-item" href="#history"><span>◷</span> Scan history</a>
+    <div class="side-card"><div class="side-icon">✳</div><b>Stay curious.<br>Browse carefully.</b><p>Every result includes the signals behind its score.</p></div>
+    <div class="side-bottom"><span class="status-dot"></span> Analysis engine online<br><small>ThreatLens v1.0 · Local mode</small></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div class="breadcrumbs">Workspace <span>/</span> URL Scanner</div><div class="top-right"><span class="privacy"><i></i> Private analysis</span><div class="avatar">AA</div></div></header>
+    <section class="content" id="scanner">
+      <div class="intro"><div><div class="eyebrow"><span class="pulse"></span> BROWSER SAFETY CENTER</div><h1>See the signals.<br><em>Choose with confidence.</em></h1><p class="lead">Check a link for common warning signs before you visit. ThreatLens explains every result in plain language.</p></div><div class="hero-art"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="shield"><svg viewBox="0 0 80 90" aria-hidden="true"><path d="M40 5 70 16v23c0 21-12 36-30 46C22 75 10 60 10 39V16L40 5Z"/><path d="m28 43 8 8 17-19"/></svg></div><span class="spark s1">✦</span><span class="spark s2">✧</span><span class="art-caption">CHECK BEFORE<br>YOU CONNECT</span></div></div>
+      <div class="metrics"><article class="metric"><span class="metric-icon blue">⌕</span><div><span class="metric-label">LINKS ANALYZED</span><strong id="totalScans">0</strong></div><span class="metric-note">this workspace</span></article><article class="metric"><span class="metric-icon coral">!</span><div><span class="metric-label">HIGH RISK FLAGS</span><strong id="highScans">0</strong></div><span class="metric-note">review carefully</span></article><article class="metric"><span class="metric-icon amber">◉</span><div><span class="metric-label">CAUTION FLAGS</span><strong id="cautionScans">0</strong></div><span class="metric-note">check the signals</span></article></div>
+      <div class="grid">
+        <section class="panel scan-panel"><div class="panel-head"><div><div class="section-kicker">QUICK CHECK</div><h2>Analyze a website link</h2></div><span class="tiny-tag"><span></span> READY</span></div><p class="panel-sub">Paste the full URL or just the domain. We’ll look for common patterns that deserve a closer look.</p>
+          <form id="scanForm"><label for="urlInput">WEBSITE ADDRESS</label><div class="input-wrap"><span class="input-prefix">↗</span><input id="urlInput" type="text" placeholder="https://example.com" autocomplete="url" required><button type="submit" id="scanButton"><span>Analyze link</span><b>→</b></button></div><div class="form-foot"><span>⌑ &nbsp; URL text is checked locally. ThreatLens does not open the site.</span><button type="button" id="exampleButton">Try an example</button></div></form>
+          <div id="result" class="result hidden" aria-live="polite"></div>
+          <div class="trust-note"><span>ⓘ</span><p><b>A safety check, not a guarantee.</b> ThreatLens uses transparent URL heuristics. A low score does not prove a site is safe, and a high score does not prove it is malicious.</p></div>
+        </section>
+        <section class="panel signals-panel"><div class="panel-head"><div><div class="section-kicker">HOW IT WORKS</div><h2>Signals, clearly explained</h2></div><span class="info-badge">i</span></div><p class="panel-sub">A score is only useful when you can see what shaped it.</p>
+          <div class="signal-list"><div class="signal"><span class="signal-icon red">⌁</span><div><b>Address patterns</b><p>Looks for unusual domain structure, misleading symbols, and long links.</p></div></div><div class="signal"><span class="signal-icon orange">⌑</span><div><b>Connection details</b><p>Notes HTTP connections and uncommon web ports.</p></div></div><div class="signal"><span class="signal-icon violet">◎</span><div><b>Clear reasons</b><p>Each finding includes a plain-language explanation to help you decide.</p></div></div></div>
+          <div class="score-key"><div><span class="key-dot low"></span><b>0–24</b><small>Fewer signals</small></div><div><span class="key-dot medium"></span><b>25–49</b><small>Use caution</small></div><div><span class="key-dot high"></span><b>50+</b><small>Higher concern</small></div></div>
+        </section>
+      </div>
+      <section class="panel history-panel" id="history"><div class="panel-head"><div><div class="section-kicker">RECENT ACTIVITY</div><h2>Your scan history</h2></div><button class="text-button" id="clearButton">Clear history <span>↗</span></button></div><div class="history-table-wrap"><table><thead><tr><th>WEBSITE</th><th>RISK LEVEL</th><th>SCORE</th><th>WHEN</th></tr></thead><tbody id="historyBody"><tr><td colspan="4" class="empty">Your recent checks will appear here.</td></tr></tbody></table></div></section>
+      <footer><span>THREATLENS <span class="footer-dot">•</span> OPEN SOURCE SECURITY PROJECT</span><span>Built to explain signals, not make decisions for you.</span></footer>
+    </section>
+  </main><script src="/static/app.js"></script>
+</body></html>

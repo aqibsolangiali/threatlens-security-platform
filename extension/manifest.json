@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "ThreatLens Link Check",
+  "version": "1.0.0",
+  "description": "Check the current tab's URL with your local ThreatLens safety dashboard.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://127.0.0.1:8000/*"],
+  "action": {
+    "default_title": "Check with ThreatLens",
+    "default_popup": "popup.html"
+  }
+}
