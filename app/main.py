@@ -11,7 +11,9 @@ import sqlite3
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import quote, urljoin, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode, urljoin, urlparse
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -20,7 +22,7 @@ from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("THREATLENS_DB_PATH", Path(__file__).resolve().parent.parent / "threatlens.db"))
-app = FastAPI(title="ThreatLens", version="1.1.0", description="Explainable URL and page-text safety analysis")
+app = FastAPI(title="ThreatLens", version="1.2.0", description="Explainable URL and limited page-text safety analysis")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 MAX_PAGE_BYTES = 512_000
@@ -31,6 +33,7 @@ MAX_REDIRECTS = 2
 class ScanRequest(BaseModel):
     url: str = Field(min_length=3, max_length=2048)
     inspect_page: bool = False
+    check_reputation: bool = False
 
 
 def db() -> sqlite3.Connection:
@@ -329,12 +332,55 @@ def inspect_page(raw_url: str, url_domain: str) -> dict:
     return {
         "status": "inspected",
         "message": note or "Read limited HTML text only. Scripts were not run, forms were not submitted, and files were not downloaded.",
+        "final_url": final_url if final_url != raw_url else "",
         "title": parser.title,
         "description": description,
         "excerpt": excerpt,
         "findings": findings,
         "points": points,
         "final_domain": final_host if final_host != url_domain else "",
+    }
+
+
+def google_safe_browsing_lookup(urls: list[str]) -> dict:
+    """Optional non-commercial reputation check; raw URLs are sent only after user opt-in."""
+    api_key = os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY", "").strip()
+    if not api_key:
+        return {
+            "status": "not_configured",
+            "message": "Google Safe Browsing is not connected. Add GOOGLE_SAFE_BROWSING_API_KEY in Render to enable this check.",
+            "matches": [],
+        }
+
+    query = urlencode([("key", api_key), *[("urls", item) for item in urls]])
+    endpoint = "https://safebrowsing.googleapis.com/v5/urls:search?" + query
+    request = Request(endpoint, headers={"Accept": "application/json", "User-Agent": "ThreatLens/1.2"})
+    try:
+        with urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read(256_000).decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError):
+        # Do not expose provider response text, which could contain request details.
+        return {
+            "status": "unavailable",
+            "message": "Google Safe Browsing could not complete the check. Try again later; the URL-pattern and page-text checks are still shown.",
+            "matches": [],
+        }
+
+    matches = payload.get("threats", []) if isinstance(payload, dict) else []
+    if matches:
+        types = sorted({str(item) for match in matches if isinstance(match, dict) for item in (match.get("threatTypes") or match.get("threat_types") or [])})
+        readable = ", ".join(types) if types else "a known unsafe-site list"
+        return {
+            "status": "match",
+            "message": f"Google Safe Browsing reports a match for {readable}. Treat this address as potentially unsafe.",
+            "matches": types,
+            "attribution": "Advisory provided by Google",
+            "advisory_url": "https://developers.google.com/safe-browsing/v4/advisory",
+        }
+    return {
+        "status": "no_match",
+        "message": "No match was found in the Google Safe Browsing lists checked. This does not prove the website is safe.",
+        "matches": [],
     }
 
 
@@ -345,18 +391,35 @@ def home():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "ThreatLens", "version": "1.1.0"}
+    return {"status": "ok", "service": "ThreatLens", "version": "1.2.0"}
 
 
 @app.post("/api/scan")
 def scan(request: ScanRequest):
     result = analyze_url(request.url)
+    page = None
     if request.inspect_page:
         page = inspect_page(result["url"], result["domain"])
         result["page_inspection"] = page
         result["findings"].extend(page["findings"])
         result["score"] = min(100, result["score"] + page["points"])
-        result["level"], result["label"] = risk_band(result["score"])
+    if request.check_reputation:
+        lookup_urls = [result["url"]]
+        if page and page.get("status") == "inspected" and page.get("final_url"):
+            final_url = page.get("final_url")
+            if final_url and final_url not in lookup_urls:
+                lookup_urls.append(final_url)
+        reputation = google_safe_browsing_lookup(lookup_urls)
+        result["reputation"] = reputation
+        if reputation["status"] == "match":
+            result["score"] = max(result["score"], 70)
+            result["findings"].append({
+                "title": "Google Safe Browsing match",
+                "detail": reputation["message"],
+                "severity": "warning",
+            })
+    result["score"] = min(result["score"], 100)
+    result["level"], result["label"] = risk_band(result["score"])
     created = datetime.now(timezone.utc).isoformat()
     with db() as conn:
         cursor = conn.execute(

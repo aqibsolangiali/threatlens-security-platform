@@ -21,16 +21,22 @@ function renderResult(data) {
     const finalDomain = p.final_domain ? `<p><b>Redirected to:</b> ${escapeHtml(p.final_domain)}</p>` : '';
     page = `<section class="page-inspection"><h3>${p.status === 'inspected' ? 'What the page says' : 'Page inspection'}</h3>${title}${description}${excerpt}${finalDomain}<p class="inspection-status">${escapeHtml(p.message)}</p></section>`;
   }
-  resultBox.innerHTML = `<div class="result-top"><div class="result-domain">${escapeHtml(data.domain)}</div><span class="result-score ${escapeHtml(data.level)}">${data.score} / 100</span></div><div class="result-label">${escapeHtml(data.label)}</div>${findings}${page}`;
+  let reputation = '';
+  if (data.reputation) {
+    const r = data.reputation;
+    const attribution = r.attribution && r.advisory_url ? `<p><a href="${escapeHtml(r.advisory_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.attribution)}</a></p>` : '';
+    reputation = `<section class="reputation-panel ${escapeHtml(r.status)}"><h3>Google Safe Browsing</h3><p>${escapeHtml(r.message)}</p>${attribution}</section>`;
+  }
+  resultBox.innerHTML = `<div class="result-top"><div class="result-domain">${escapeHtml(data.domain)}</div><span class="result-score ${escapeHtml(data.level)}">${data.score} / 100</span></div><div class="result-label">${escapeHtml(data.label)}</div>${findings}${reputation}${page}`;
 }
 form.addEventListener('submit', async e => {
   e.preventDefault(); button.disabled = true; button.querySelector('span').textContent = 'Checking…'; resultBox.classList.add('hidden');
   try {
-    const res = await fetch('/api/scan', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value,inspect_page:$('#inspectPage').checked})});
+    const res = await fetch('/api/scan', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:input.value,inspect_page:$('#inspectPage').checked,check_reputation:$('#checkReputation').checked})});
     const data = await res.json(); if (!res.ok) throw new Error(data.detail || 'Could not analyze that address.'); renderResult(data); await refresh();
   } catch (err) { resultBox.classList.remove('hidden'); resultBox.innerHTML = `<div class="error-box">${escapeHtml(err.message)}</div>`; }
   finally { button.disabled = false; button.querySelector('span').textContent = 'Analyze link'; }
 });
-$('#exampleButton').addEventListener('click', () => { input.value = 'http://secure-account-verify.example-login.com/signin'; $('#inspectPage').checked = false; input.focus(); });
+$('#exampleButton').addEventListener('click', () => { input.value = 'http://secure-account-verify.example-login.com/signin'; $('#inspectPage').checked = false; $('#checkReputation').checked = false; input.focus(); });
 $('#clearButton').addEventListener('click', async () => { if (!confirm('Clear all scan history?')) return; await fetch('/api/history', {method:'DELETE'}); resultBox.classList.add('hidden'); await refresh(); });
 refresh().catch(() => { $('#historyBody').innerHTML = '<tr><td colspan="4" class="empty">Could not load history. Is the server running?</td></tr>'; });
