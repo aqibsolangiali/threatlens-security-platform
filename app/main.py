@@ -342,6 +342,78 @@ def inspect_page(raw_url: str, url_domain: str) -> dict:
     }
 
 
+def _read_proto_varint(data: bytes, offset: int) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    while offset < len(data) and shift < 70:
+        byte = data[offset]
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if byte < 0x80:
+            return value, offset
+        shift += 7
+    raise ValueError("Invalid protobuf varint")
+
+
+def _iter_proto_fields(data: bytes):
+    offset = 0
+    while offset < len(data):
+        tag, offset = _read_proto_varint(data, offset)
+        field_number, wire_type = tag >> 3, tag & 7
+        if field_number == 0:
+            raise ValueError("Invalid protobuf field")
+        if wire_type == 0:
+            value, offset = _read_proto_varint(data, offset)
+        elif wire_type == 1:
+            if offset + 8 > len(data):
+                raise ValueError("Invalid protobuf fixed64")
+            value, offset = data[offset:offset + 8], offset + 8
+        elif wire_type == 2:
+            size, offset = _read_proto_varint(data, offset)
+            if size > len(data) - offset:
+                raise ValueError("Invalid protobuf length")
+            value, offset = data[offset:offset + size], offset + size
+        elif wire_type == 5:
+            if offset + 4 > len(data):
+                raise ValueError("Invalid protobuf fixed32")
+            value, offset = data[offset:offset + 4], offset + 4
+        else:
+            raise ValueError("Unsupported protobuf wire type")
+        yield field_number, wire_type, value
+
+
+def _decode_safe_browsing_response(data: bytes) -> dict:
+    """Decode Safe Browsing v5's protobuf SearchUrlsResponse."""
+    threat_names = {
+        1: "MALWARE",
+        2: "SOCIAL_ENGINEERING",
+        3: "UNWANTED_SOFTWARE",
+        4: "POTENTIALLY_HARMFUL_APPLICATION",
+    }
+    threats = []
+    for field_number, wire_type, value in _iter_proto_fields(data):
+        # SearchUrlsResponse.threats is repeated ThreatUrl field 1.
+        if field_number != 1 or wire_type != 2:
+            continue
+        url = ""
+        types = []
+        for nested_number, nested_wire, nested_value in _iter_proto_fields(value):
+            # ThreatUrl.url is field 1; threat_types is repeated enum field 2.
+            if nested_number == 1 and nested_wire == 2:
+                url = nested_value.decode("utf-8", errors="replace")
+            elif nested_number == 2 and nested_wire == 0:
+                types.append(threat_names.get(nested_value, f"UNKNOWN_THREAT_TYPE_{nested_value}"))
+            elif nested_number == 2 and nested_wire == 2:
+                packed_offset = 0
+                while packed_offset < len(nested_value):
+                    enum_value, packed_offset = _read_proto_varint(nested_value, packed_offset)
+                    types.append(threat_names.get(enum_value, f"UNKNOWN_THREAT_TYPE_{enum_value}"))
+        # Only a message with a URL is a useful threat match.
+        if url:
+            threats.append({"url": url, "threatTypes": types})
+    return {"threats": threats}
+
+
 def google_safe_browsing_lookup(urls: list[str]) -> dict:
     """Optional non-commercial reputation check; raw URLs are sent only after user opt-in."""
     api_key = os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY", "").strip()
@@ -357,7 +429,12 @@ def google_safe_browsing_lookup(urls: list[str]) -> dict:
     request = Request(endpoint, headers={"Accept": "application/json", "User-Agent": "ThreatLens/1.2"})
     try:
         with urlopen(request, timeout=5) as response:
-            payload = json.loads(response.read(256_000).decode("utf-8"))
+            body = response.read(256_000)
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError):
+            # Safe Browsing v5 may return protobuf bytes, which are not JSON.
+            payload = _decode_safe_browsing_response(body)
     except HTTPError as exc:
         # Record only the HTTP status. Never log the request URL (it contains the key)
         # or return Google's raw response body to the visitor.
