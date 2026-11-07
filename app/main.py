@@ -358,11 +358,34 @@ def google_safe_browsing_lookup(urls: list[str]) -> dict:
     try:
         with urlopen(request, timeout=5) as response:
             payload = json.loads(response.read(256_000).decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, OSError, ValueError):
-        # Do not expose provider response text, which could contain request details.
+    except HTTPError as exc:
+        # Record only the HTTP status. Never log the request URL (it contains the key)
+        # or return Google's raw response body to the visitor.
+        status_messages = {
+            400: "Google rejected the lookup request (HTTP 400).",
+            401: "Google did not accept the API key (HTTP 401).",
+            403: "Google denied API access (HTTP 403). Check that Safe Browsing API is enabled for the key's project and that the key's API restriction allows it.",
+            429: "Google rate-limited the lookup or the project reached its quota (HTTP 429).",
+        }
+        message = status_messages.get(exc.code, f"Google returned an error (HTTP {exc.code}).")
+        print(f"ThreatLens Safe Browsing lookup failed: HTTP {exc.code}")
         return {
             "status": "unavailable",
-            "message": "Google Safe Browsing could not complete the check. Try again later; the URL-pattern and page-text checks are still shown.",
+            "message": f"{message} URL-pattern and page-text checks are still shown.",
+            "matches": [],
+        }
+    except (URLError, TimeoutError, OSError):
+        print("ThreatLens Safe Browsing lookup failed: network error or timeout")
+        return {
+            "status": "unavailable",
+            "message": "ThreatLens could not reach Google Safe Browsing (network error or timeout). URL-pattern and page-text checks are still shown.",
+            "matches": [],
+        }
+    except ValueError:
+        print("ThreatLens Safe Browsing lookup failed: invalid JSON response")
+        return {
+            "status": "unavailable",
+            "message": "Google returned a response ThreatLens could not read. URL-pattern and page-text checks are still shown.",
             "matches": [],
         }
 
