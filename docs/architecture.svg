@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-labelledby="title desc">
+<title id="title">ThreatLens system architecture</title>
+<desc id="desc">The browser dashboard sends a scan request to a FastAPI service. The service runs URL checks, optionally inspects a limited amount of public HTML, optionally requests Google Safe Browsing, saves a summary to SQLite, and returns explained findings.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0e172a"/><stop offset="1" stop-color="#172a4b"/></linearGradient>
+  <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6188ff"/><stop offset="1" stop-color="#4165df"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".22"/></filter>
+  <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12z" fill="#85a5ff"/></marker>
+  <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12z" fill="#57d2b0"/></marker>
+  <style>
+    .title{font:700 34px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.sub{font:400 17px Inter,Segoe UI,Arial,sans-serif;fill:#b5c2d8}.h{font:700 20px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.t{font:400 15px Inter,Segoe UI,Arial,sans-serif;fill:#c5d1e4}.tiny{font:700 12px Inter,Segoe UI,Arial,sans-serif;letter-spacing:1.6px;fill:#98b3ff}.box{fill:#1c2d4b;stroke:#405477;stroke-width:1.5}.smallbox{fill:#172640;stroke:#3a4d6d;stroke-width:1.3}
+  </style>
+</defs>
+<rect width="1440" height="820" rx="30" fill="url(#bg)"/>
+<circle cx="1278" cy="132" r="108" fill="#3159d5" opacity=".10"/><circle cx="1278" cy="132" r="73" fill="none" stroke="#92aaff" opacity=".14"/>
+<text x="72" y="76" class="tiny">THREATLENS • SYSTEM MAP</text>
+<text x="72" y="126" class="title">One scan. Three sources of signals.</text>
+<text x="72" y="160" class="sub">Optional checks are explicit; the result explains what each signal means.</text>
+<!-- main lane -->
+<rect x="72" y="230" width="270" height="196" rx="22" class="box" filter="url(#shadow)"/>
+<rect x="96" y="254" width="48" height="48" rx="14" fill="url(#blue)"/><text x="112" y="286" style="font:700 25px Arial;fill:white">T</text>
+<text x="164" y="274" class="tiny">USER-INITIATED</text><text x="164" y="299" class="h">Browser dashboard</text>
+<text x="98" y="345" class="t">Paste a URL and choose whether</text><text x="98" y="369" class="t">to inspect page text or query Google.</text>
+<rect x="98" y="389" width="116" height="23" rx="11" fill="#263d62"/><text x="112" y="405" style="font:600 11px Arial;fill:#b8cbff">HTTPS request</text>
+<path d="M342 328H414" fill="none" stroke="#85a5ff" stroke-width="3" marker-end="url(#arrow)"/>
+<text x="355" y="307" class="tiny">SCAN REQUEST</text>
+<path d="M430 252V205H208V228" fill="none" stroke="#57d2b0" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+<text x="265" y="196" class="tiny">EXPLAINED JSON RESULT</text>
+<rect x="430" y="230" width="360" height="196" rx="22" fill="#203b70" stroke="#6e91ff" stroke-width="2" filter="url(#shadow)"/>
+<text x="464" y="275" class="tiny">APPLICATION LAYER</text><text x="464" y="312" class="h">FastAPI scan service</text>
+<text x="464" y="349" class="t">Validates input • coordinates checks</text><text x="464" y="374" class="t">combines findings • returns JSON</text>
+<rect x="464" y="389" width="176" height="23" rx="11" fill="#304d87"/><text x="478" y="405" style="font:600 11px Arial;fill:#d7e0ff">Python • Pydantic • Uvicorn</text>
+<!-- paths to checks -->
+<path d="M610 426V492H250V527" fill="none" stroke="#85a5ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M610 426V492H705V527" fill="none" stroke="#85a5ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M610 426V492H1160V527" fill="none" stroke="#85a5ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="72" y="481" class="tiny">IN-PROCESS + OPTIONAL OUTBOUND CHECKS</text>
+<!-- components -->
+<rect x="72" y="530" width="355" height="184" rx="22" class="box" filter="url(#shadow)"/>
+<circle cx="111" cy="572" r="20" fill="#254c8a"/><text x="104" y="579" style="font:700 18px Arial;fill:#bcd0ff">1</text>
+<text x="146" y="568" class="h">URL heuristics</text><text x="98" y="612" class="t">Always on • URL structure, scheme,</text><text x="98" y="636" class="t">hostname, length, port, and symbols.</text>
+<rect x="98" y="664" width="173" height="25" rx="12" fill="#183c55"/><text x="112" y="681" style="font:600 11px Arial;fill:#79e1c3">No external lookup</text>
+<rect x="532" y="530" width="355" height="184" rx="22" class="box" filter="url(#shadow)"/>
+<circle cx="571" cy="572" r="20" fill="#254c8a"/><text x="564" y="579" style="font:700 18px Arial;fill:#bcd0ff">2</text>
+<text x="606" y="568" class="h">Limited page inspection</text><text x="558" y="612" class="t">Optional • public HTML only, capped at</text><text x="558" y="636" class="t">500 KB; no scripts, forms, or downloads.</text>
+<rect x="558" y="664" width="243" height="25" rx="12" fill="#493a27"/><text x="572" y="681" style="font:600 11px Arial;fill:#ffd18a">Public IP and redirect safeguards</text>
+<rect x="992" y="530" width="355" height="184" rx="22" class="box" filter="url(#shadow)"/>
+<circle cx="1031" cy="572" r="20" fill="#254c8a"/><text x="1024" y="579" style="font:700 18px Arial;fill:#bcd0ff">3</text>
+<text x="1066" y="568" class="h">Google Safe Browsing</text><text x="1018" y="612" class="t">Optional • full URL sent only when</text><text x="1018" y="636" class="t">the user selects the lookup.</text>
+<rect x="1018" y="664" width="194" height="25" rx="12" fill="#493a27"/><text x="1032" y="681" style="font:600 11px Arial;fill:#ffd18a">Key stays server-side</text>
+<!-- output + db -->
+<path d="M790 328H866" fill="none" stroke="#57d2b0" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+<rect x="882" y="230" width="378" height="196" rx="22" class="box" filter="url(#shadow)"/>
+<text x="916" y="275" class="tiny">PERSISTENCE</text><text x="916" y="312" class="h">SQLite scan history</text>
+<text x="916" y="349" class="t">Stores domain and result summary;</text><text x="916" y="374" class="t">does not keep the URL path or query.</text>
+<rect x="916" y="389" width="127" height="23" rx="11" fill="#183c55"/><text x="930" y="405" style="font:600 11px Arial;fill:#79e1c3">Local database</text>
+<text x="72" y="772" style="font:400 14px Inter,Segoe UI,Arial,sans-serif;fill:#9eabc0">The score is a set of warning signals, not a safety guarantee. Page inspection and Google lookup are opt-in.</text>
+</svg>
